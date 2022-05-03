@@ -3,45 +3,81 @@ import configparser as cp
 import sys
 #Path to Football api folder
 sys.path.insert(0, 'C:\\Users\\jorov\\Desktop\\football-Bot\\API_FootballInfo')
-import football
+import onexbet
+from telebot import types
+
 
 config = cp.ConfigParser()
 config.read('config.ini')
 API_TOKEN = config['TELEGRAM']['token']
 bot = telebot.TeleBot(API_TOKEN)
-fApi = football.BettingApi()
+fApi = onexbet.BettingApi()
 
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     sti = open('Images/welcome.webp', 'rb')
     bot.send_sticker(message.chat.id, sti)
-    bot.send_message(message.chat.id, 'Hi, {} is new football assistance'
-                                       .format(bot.get_me().full_name),
-                                       parse_mode='html')
+    bot.send_message(message.chat.id,
+                    'Hi, {} is new football assistance'
+                    .format(bot.get_me().full_name),
+                    parse_mode='html')
 
 
 @bot.message_handler(commands=['help'])
 def help_command(message):
-    bot.send_message(message.chat.id, '/club - three matches in future\n' + 
-                                      '/events_today - show all football matches for today',
-                                       parse_mode='html')
+    bot.send_message(message.chat.id,
+                    '/1xbet - \n', 
+                     parse_mode='html')
+
+ 
+@bot.message_handler(commands=['1xbet'])
+def onexbet_command(message):
+    
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    button1 = types.KeyboardButton('Club')
+    button2 = types.KeyboardButton('Current')
+
+    markup.add(button1, button2)
+
+    bot.send_message(message.chat.id,
+                    'Choose option',
+                    reply_markup=markup)
 
 
-@bot.message_handler(commands=['club'])
-def help_command(message):
-    bot.send_message(message.chat.id, 'Write down yours')
-    bot.register_next_step_handler(message, get_club)
+@bot.message_handler(content_types=['text'])
+def onexbet_choose_branch(message):
+    if message.chat.type == 'private':
+        if message.text == 'Club':
+            bot.register_next_step_handler(message, onexbet_get_club_games)
+        if message.text == 'Current':
+            onexbet_get_current_events(message)
 
 
-def get_club(message):
-    bot.send_message(message.chat.id, "test")
+def onexbet_get_club_games(message):
+    matches = fApi.get_club_events(message.text)
+    markup = types.ReplyKeyboardRemove(selective = False)
+    bot.send_message(message.chat.id, 
+                     matches, 
+                     reply_markup = markup, 
+                     parse_mode='html')
 
 
-@bot.message_handler(commands=['events_today'])
-def events_today_command(message):
-    events = fApi.get_club_events()
-    bot.send_message(message.chat.id, events, parse_mode='html')
+def onexbet_get_current_events(message):   
+    events = fApi.get_today_matches()
+    markup = types.ReplyKeyboardRemove (selective = False)
 
+    if len(events) > 4095:
+        for x in range(0, len(events), 4095):
+            bot.reply_to(message, 
+                         text=events[x:x+4095], 
+                         parse_mode='html',
+                         reply_markup = markup)
+    else:
+        bot.reply_to(message, 
+                     text=events, 
+                     parse_mode='html',
+                     reply_markup = markup)
+                  
 
-bot.infinity_polling()
+bot.infinity_polling()      

@@ -15,18 +15,18 @@ class BettingApi():
         #English name pattern 
         pattern = '[A-z -]+'       
         response = self.get_response(self.config["FOOTBALL"]["events_url"])
-        search_in = 'team1' if re.match(pattern, club_name) else 'team1_rus'
+        search_in = ['team1', 'team2'] if re.match(pattern, club_name) else ['team1_rus', 'team2_rus']
         events_data = str()
         for frame in response:
             try:
-                if frame[search_in].lower() == club_name: 
-                    events_data += '{} vs {} date {} coeficent (lose {} win {})\n'.format(
+                if club_name in [frame[x].lower() for x in search_in]:
+                    events_data += '{} vs {} date {} coeficent (win1 {} win2 {})\n'.format(
                         frame['team1'], frame['team2'], frame['date_start'][:10], 
                         frame['markets']['win1']['v'], frame['markets']['win2']['v']
                     )
-            except KeyError:
+            except KeyError as e:
                 logging.warning('get_club_events: not found element {}'.format(str(e)))
-        return events_data
+        return events_data if not events_data == '' else 'not data for {}'.format(club_name)
 
 
     def get_today_matches(self):
@@ -50,8 +50,3 @@ class BettingApi():
         }
         return requests.request("GET", url, headers=headers).json()
     
-
-
-# test = BettingApi()
-
-# print(test.get_today_matches())
