@@ -27,7 +27,7 @@ def send_welcome(message):
 @bot.message_handler(commands=['help'])
 def help_command(message):
     bot.send_message(message.chat.id,
-                    '/1xbet - \n', 
+                    '/1xbet - GET info from onexbet\n', 
                      parse_mode='html')
 
  
@@ -47,37 +47,44 @@ def onexbet_command(message):
 
 @bot.message_handler(content_types=['text'])
 def onexbet_choose_branch(message):
+    markup = types.ReplyKeyboardRemove(selective = False)
     if message.chat.type == 'private':
-        if message.text == 'Club':
+        if message.text == 'Club':          
+            bot.send_message(message.chat.id,
+                    'Choose club',
+                    reply_markup = markup,
+                    parse_mode='html')
             bot.register_next_step_handler(message, onexbet_get_club_games)
         if message.text == 'Current':
+            bot.send_message(message.chat.id,
+                    'Waiting...',
+                    reply_markup = markup,
+                    parse_mode='html')            
             onexbet_get_current_events(message)
 
 
 def onexbet_get_club_games(message):
     matches = fApi.get_club_events(message.text)
     markup = types.ReplyKeyboardRemove(selective = False)
-    bot.send_message(message.chat.id, 
-                     matches, 
-                     reply_markup = markup, 
+    bot.send_message(message.chat.id,
+                     matches,
+                     reply_markup = markup,
                      parse_mode='html')
 
 
-def onexbet_get_current_events(message):   
+def onexbet_get_current_events(message):
     events = fApi.get_today_matches()
-    markup = types.ReplyKeyboardRemove (selective = False)
-
     if len(events) > 4095:
         for x in range(0, len(events), 4095):
-            bot.reply_to(message, 
-                         text=events[x:x+4095], 
-                         parse_mode='html',
-                         reply_markup = markup)
+            bot.reply_to(message,
+                         text=events[x:x+4095],
+                         parse_mode='html')
     else:
-        bot.reply_to(message, 
-                     text=events, 
-                     parse_mode='html',
-                     reply_markup = markup)
+        bot.reply_to(message,
+                     text=events,
+                     parse_mode='html')
                   
+
+
 
 bot.infinity_polling()      
