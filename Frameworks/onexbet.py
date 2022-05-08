@@ -20,9 +20,8 @@ class BettingApi():
         for frame in response:
             try:
                 if club_name in [frame[x].lower() for x in search_in]:
-                    events_data += '{} vs {} date {} coeficent (win1 {} win2 {})\n'.format(
-                        frame['team1'], frame['team2'], frame['date_start'][:10], 
-                        frame['markets']['win1']['v'], frame['markets']['win2']['v']
+                    events_data += '{} vs {} date {}\n'.format(
+                        frame['team1'], frame['team2'], frame['date_start'][:10]
                     )
             except KeyError as e:
                 logging.warning('get_club_events: not found element {}'.format(str(e)))
