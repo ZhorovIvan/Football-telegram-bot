@@ -1,9 +1,9 @@
 import logging
 from Frameworks.football_telebot import TelegramBot
-from Frameworks.sender_mesage import Timer
+from Frameworks.sender_message import Timer
 
 
-def main():
+def main() -> None:
     logging.basicConfig(filename='log.log',
                                 encoding='utf-8',
                                 filemode='w',
@@ -15,7 +15,7 @@ def main():
 
     process1.start()
     process2.start()
-     
+ 
 
 if __name__ == "__main__":
-    main()    
+    main()
