@@ -1,21 +1,22 @@
 import logging
 from Frameworks.football_telebot import TelegramBot
-from Frameworks.sender_message import Timer
+from Frameworks.fill_db_table import Timer
+from Frameworks.settings import read_config, init_logger
 
 
 def main() -> None:
-    logging.basicConfig(filename='log.log',
-                                encoding='utf-8',
-                                filemode='w',
-                                level=logging.DEBUG)
-    logging.info('Started')
+    init_logger()
+    config = read_config()
 
-    process1 = Timer()
-    process2 = TelegramBot()
+    process1 = Timer(config)
+    process2 = TelegramBot(config)
 
     process1.start()
     process2.start()
  
 
 if __name__ == "__main__":
-    main()
+    # try:
+        main()
+    # except Exception as e:
+    #     logging.fatal(e)

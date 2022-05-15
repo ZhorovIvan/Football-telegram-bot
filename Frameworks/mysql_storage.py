@@ -1,25 +1,27 @@
 # pip install mysql-connector-python
 import mysql.connector
-import configparser as cp
 from mysql.connector import errorcode
 from datetime import datetime
 import logging
+import configparser as cp
+from Frameworks.onexbet import BettingApi
+
 
 
 class MySQLStorage():
-
     '''
     Table schema 
-    | id | team1 | team2 | data_start | title |
+    | id | team1 | team2 | start_date | title |
     '''     
 
     def __init__(self) -> None:
         self.config = self.read_config()
+        self.fApi = BettingApi()
 
 
     def create_connection(self) -> mysql.connector:
         '''
-        Get connection 
+        Get connection
         '''
         try:
             mydb = mysql.connector.connect(
@@ -39,68 +41,99 @@ class MySQLStorage():
         return mydb
 
 
-    def multi_insert_to_db(self, data) -> None:
+    # Methods for team table
+    def insert_row_to_team(self, chat_id, name) -> str:
         '''
-        Insetr some rows to mysql database in format:
+        Get info from in format
+        | chat_id | team_name |
+        '''
+        query = ("INSERT INTO team "
+                "(chat_id, team_name) "
+                "VALUES ({id}, '{n}')"
+                .format(id=chat_id, n=name))
+        return self.__execute_query(query)
+
+
+    def get_rows_by_id_team(self, chat_id) -> list:
+        '''
+        Get data by chat id from team table
+        '''
+        query = ("SELECT * FROM team " 
+                "WHERE chat_id = {id}"
+                .format(id=chat_id))
+        return self.__execute_select_query(query)
+
+
+    def get_all_rows_team(self) -> list:
+        '''
+        Get all rows from team table
+        '''
+        query = "SELECT * FROM team" 
+        return self.__execute_select_query(query)    
+
+
+    def delete_by_name_id_team(self, chat_id, name) -> str:
+        '''
+        Clear row by name and chat_id in team table
+        '''
+        query = ("DELETE FROM team "
+                "WHERE chat_id = {id} AND " 
+                "team_name = '{n}'"
+                .format(id=chat_id, n=name))
+        return self.__execute_query(query)
+
+
+    def clear_table_team(self) -> str:
+        '''
+        Delete all rows from team table
+        '''
+        query = ("TRUNCATE TABLE team")
+        return self.execute_query(query)
+
+    
+    # Methods for onexdata table
+    def multi_insert_to_onexdata(self) -> str:
+        
+        '''
+        Insetr some rows to mysql database onexdata table in format:
         data = (team1, team2, start_date, title), 
                (team1, team2, start_date, title) 
         '''
-        try:
-            con = self.create_connection()
-            cursor = con.cursor()
-            add_club_data = ("INSERT INTO onexdata "
-                            "(team1, team2, start_date, title) "
-                            "VALUES " + data)
-            cursor.execute(add_club_data)
-            con.commit()
-        finally:
-            con.close()
+        data = self.fApi.get_club_events()
+        query = ("INSERT INTO onexdata "
+                        "(team1, team2, start_date, title) "
+                        "VALUES " + data)
+        return self.__execute_query(query)
 
 
-    def clear_table(self) -> None:
+    def clear_table_onexdata(self, name) -> str:
         '''
         Delete all rows from onexdata table
         '''
-        try:
-            con = self.create_connection()
-            cursor = con.cursor()
-            clear_query = ("TRUNCATE TABLE onexdata")
-            cursor.execute(clear_query)
-            con.commit()
-        finally:
-            con.close()
+        query = ("TRUNCATE TABLE onexdata")
+        return self.__execute_query(query)
 
 
-    def get_rows_by_time(self) -> list:
+    def get_rows_by_current_time_onexdata(self) -> list:
         '''
-        Get rows where time is today
+        Get rows where time is today from onexdata table
         '''
-        try:
-            con = self.create_connection()
-            cursor = con.cursor()
-            clear_query = ("SELECT * FROM onexdata WHERE data_start = '{}'"
-                                            .format(self.get_today_str()))
-            cursor.execute(clear_query)
-            result = cursor.fetchall()
-            return result
-        finally:
-            con.close()
+        cur_time = self.get_today_str()
+        query = ("SELECT * FROM onexdata" 
+                    "WHERE start_date LIKE '{d}%'"
+                    .format(d=cur_time))
+        return self.__execute_select_query(query)
 
 
-    def get_rows_by_team_name(self, value) -> list:
+    def get_rows_by_teams_name_onexdata(self, value) -> list:
         '''
-        Get rows in the select where team1 or team2 equals a needed team
+        Get rows in the select where team1 or team2 
+        equals a needed team from onexdata table
         '''
-        try:
-            con = self.create_connection()
-            cursor = con.cursor()
-            clear_query = ("SELECT * FROM onexdata WHERE team1 = '{val}' or team1 = '{val}'"
-                                                                        .format(val=value))
-            cursor.execute(clear_query)
-            result = cursor.fetchall()
-            return result
-        finally:
-            con.close()        
+        query = ("SELECT * FROM onexdata WHERE" 
+                "team1 = '{val}' or team1 = '{val}'"
+                .format(val=value))
+        return self.__execute_select_query(query)        
 
 
     def get_today_str(self) -> str:
@@ -111,10 +144,60 @@ class MySQLStorage():
         return now.strftime("%Y-%m-%d")
 
 
-    def read_config(self) -> cp:
+    # Methods for league table
+    def multi_insert_to_league(self) -> str:
+        
         '''
-        read config.ini file
+        Insetr some rows to mysql database onexdata table in format:
+        data = (team1, team2, start_date, title), 
+               (team1, team2, start_date, title) 
+        '''
+        data = self.fApi.get_club_events()
+        query = ("INSERT INTO onexdata "
+                "(team1, team2, start_date, title) "
+                 "VALUES " + data)
+        return self.__execute_query(query)
+
+
+    def __execute_select_query(self, query) -> list: 
+        try:
+            con = self.create_connection()
+            cursor = con.cursor()
+            cursor.execute(query)
+            result = cursor.fetchall()
+            return result
+        except:
+            return list()
+        finally:
+            con.close()             
+
+
+    def __execute_query(self, query) -> str:
+        try:
+            con = self.create_connection()
+            cursor = con.cursor(buffered=True)
+            cursor.execute(query)
+            con.commit()
+            return 'seccsessfully'
+        except:
+            return 'unseccsessfully'    
+        finally:
+            con.close()  
+
+
+    def read_config(self) -> cp.ConfigParser:
+        '''
+        Read config.ini file
         '''
         config = cp.ConfigParser()
         config.read('config.ini')
-        return config
+        return config                           
+
+t = MySQLStorage()
+
+print(t.delete_by_name_id_team(1, '23123'))
+
+
+
+
+
