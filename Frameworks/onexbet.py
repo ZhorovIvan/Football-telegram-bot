@@ -31,25 +31,19 @@ class BettingApi():
         response = self.__get_response(self.config["FOOTBALL"]["leagues_url"])
         data_for_insert_to_league = str()
         for frame in response:
-            data_for_insert_to_league += self.__get_info_for_onexdata(frame)
+            data_for_insert_to_league += self.__get_info_for_leagues(frame)
         return data_for_insert_to_league[:-1]
 
 
-    def __get_info_for_onexdata(self, frame) -> str:
+    def __get_info_for_leagues(self, frame) -> str:
         '''
         Get data for inseting
         '''
-        try:
-            #Stop here  
-            team1 = frame['team1'].replace("'", "")
-            team2 = frame['team2'].replace("'", "")
-            date_start = frame['date_start'].replace("'", "")
-            title = frame['title'].replace("'", "")
-            data = ("('{t1}', '{t2}', '{dt}', '{ti}' ),"
-                    .format(t1=team1, t2=team2, dt=date_start, ti=title))
-            return data 
+        try: 
+            league = frame['title'].replace("'", "")
+            return "({le}),".format(le=league)
         except KeyError as e:
-            logging.warning('get_club_events: not found element {}'.format(str(e)))
+            logging.warning('get_all_leagues: not found element {}'.format(str(e)))
         except Exception as e:
             logging.error(str(e))        
         return ''     

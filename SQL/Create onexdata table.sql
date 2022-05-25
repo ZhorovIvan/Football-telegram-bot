@@ -1,4 +1,4 @@
-create table telegrambot.OnexData (
+create table telegrambot.onexdata (
 id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 team1 VARCHAR(150) NOT NULL,
 team2 VARCHAR(150) NOT NULL,

@@ -12,7 +12,7 @@ def read_config() -> cp.ConfigParser:
 
 def init_logger() -> None:
     logging.basicConfig(filename='log.log',
-                                encoding='utf-8',
-                                filemode='w',
-                                level=logging.DEBUG)
+                        encoding='utf-8',
+                        filemode='w',
+                        level=logging.DEBUG)
     logging.info('Started')

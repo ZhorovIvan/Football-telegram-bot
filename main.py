@@ -1,4 +1,3 @@
-import logging
 from Frameworks.football_telebot import TelegramBot
 from Frameworks.fill_db_table import Timer
 from Frameworks.settings import read_config, init_logger

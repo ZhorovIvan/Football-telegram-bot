@@ -13,7 +13,7 @@ class Timer(threading.Thread):
     def __init__(self, config) -> None:
         threading.Thread.__init__(self)
         self.bot = TelegramBot(config)
-        self.mysql = MySQLStorage(self.config)
+        self.mysql = MySQLStorage(config)
         self.config = config
 
 
@@ -24,11 +24,10 @@ class Timer(threading.Thread):
                 self.fill_database()
 
 
-    def fill_database(self):
-            self.mysql.clear_table()
-            self.mysql.multi_insert_to_db()
+    def fill_database(self) -> None:
+        pass
 
-                
+
     def is_start_time(self, time) -> bool:
         '''
         Timer for start filling db out
