@@ -7,10 +7,10 @@ def main() -> None:
     init_logger()
     config = read_config()
 
-    process1 = Timer(config)
+    #process1 = Timer(config)
     process2 = TelegramBot(config)
 
-    process1.start()
+    #process1.start()
     process2.start()
  
 

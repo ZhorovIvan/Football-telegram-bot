@@ -15,21 +15,21 @@ class TelegramBot(threading.Thread):
     #Buttons for main menu
     club_button = '⚽️club' 
     current_events = '🚀current events' 
-    clubs_list = '🧨club list'
+    favorite_list = '🧨my event list'
     close_button = '🔚close'
+    all_league_button = '🥅all leagues'
 
     #Buttons for second menu
     get_list_button = '📚get list'
-    add_club_button = '📇add club'
-    remove_club_button = '🗑remove club'
-    remove_all_clubs_button = '🗑remove all clubs'
+    add_league_button = '📇add league'
+    remove_league_button = '🗑remove league'
+    remove_all_leagues_button = '🗑remove all leagues'
     return_back_button = '🔙return back'
 
 
     def __init__(self, config) -> None:
         threading.Thread.__init__(self)
         self.config = config
-        self.chat_id = self.config['TELEGRAM']['chat_id']
         self.bot = telebot.TeleBot(self.config['TELEGRAM']['token'])
         self.mysql = MySQLStorage(self.config)
 
@@ -49,7 +49,7 @@ class TelegramBot(threading.Thread):
         def help_command(message) -> None:
             __send_message_cu('/1xbet - Open general 1xmenu',message.chat.id)
 
-        
+
         @self.bot.message_handler(commands=['1xbet'])
         def onexbet_command(message) -> None:
             '''
@@ -58,9 +58,10 @@ class TelegramBot(threading.Thread):
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
             button1 = types.KeyboardButton(self.club_button)
             button2 = types.KeyboardButton(self.current_events)
-            button3 = types.KeyboardButton(self.clubs_list)
+            button3 = types.KeyboardButton(self.favorite_list)
             button4 = types.KeyboardButton(self.close_button)
-            markup.add(button1, button2, button3, button4)
+            button5 = types.KeyboardButton(self.all_league_button)
+            markup.add(button1, button2, button3, button4, button5)
 
             self.bot.send_message(message.chat.id,
                                 '<b>Choose option</b>',
@@ -76,9 +77,9 @@ class TelegramBot(threading.Thread):
             '''
             markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
             button1 = types.KeyboardButton(self.get_list_button)
-            button2 = types.KeyboardButton(self.add_club_button)
-            button3 = types.KeyboardButton(self.remove_club_button)
-            button4 = types.KeyboardButton(self.remove_all_clubs_button)
+            button2 = types.KeyboardButton(self.add_league_button)
+            button3 = types.KeyboardButton(self.remove_league_button)
+            button4 = types.KeyboardButton(self.remove_all_leagues_button)
             button5 = types.KeyboardButton(self.return_back_button)
             button6 = types.KeyboardButton(self.close_button)          
             markup.add(button1, button2, button3, button4, button5, button6)
@@ -96,12 +97,13 @@ class TelegramBot(threading.Thread):
             '''
             main_menu_list = [self.club_button,
                               self.current_events,
-                              self.clubs_list]
+                              self.favorite_list,
+                              self.all_league_button]
 
             list_menu = [self.get_list_button,
-                        self.add_club_button,
-                        self.remove_club_button,
-                        self.remove_all_clubs_button,
+                        self.add_league_button,
+                        self.remove_league_button,
+                        self.remove_all_leagues_button,
                         self.return_back_button]
 
             if message.text in main_menu_list:
@@ -126,10 +128,6 @@ class TelegramBot(threading.Thread):
             if not self.mysql.get_rows_by_current_time_onexdata():
                 self.mysql.multi_insert_to_onexdata()
 
-            #Check if whether there are rows in the league table or not
-            if not self.mysql.get_allrows_from_league():
-                self.mysql.multi_insert_to_league()
-
 
         def __main_button_memu(message) -> None:
             '''
@@ -141,8 +139,15 @@ class TelegramBot(threading.Thread):
                                                     __onexbet_get_club_games)
             elif message.text == self.current_events:            
                 __onexbet_get_current_events(message)
-            elif message.text == self.clubs_list:
-                work_with_list(message)       
+            elif message.text == self.favorite_list:
+                work_with_list(message)
+            elif message.text == self.all_league_button:
+                __print_all_leagues(message)      
+
+
+        def __print_all_leagues(message):
+            leagues = self.mysql.get_allrows_from_league()
+            __send_message_cu(leagues, message.chat.id)
 
 
         def __onexbet_get_club_games(message) -> None:
@@ -158,25 +163,34 @@ class TelegramBot(threading.Thread):
             Action for working with club_storage
             '''
             if message.text == self.get_list_button:
-                answer = self.storage.get_teams()
+                answer = __form_leagues_list(message)
                 __send_message_cu(answer, message.chat.id)
 
-
-            elif message.text == self.add_club_button:
-                __send_message_cu('<b>Write club</b>', message.chat.id) 
+            elif message.text == self.add_league_button:
+                __send_message_cu('<b>Write league</b>', message.chat.id) 
                 self.bot.register_next_step_handler(message,
                                                     __add_club_to_club_storage)     
 
-            elif message.text == self.remove_club_button:
-                __send_message_cu('<b>Write club</b>')
+            elif message.text == self.remove_league_button:
+                __send_message_cu('<b>Write league</b>', message.chat.id)
                 self.bot.register_next_step_handler(message,
                                                     __remove_club_from_storage)          
 
-            elif message.text == self.remove_all_clubs_button:
-                __send_message_cu('clubs have been removed', message.chat.id)
+            elif message.text == self.remove_all_leagues_button:
+                answer = self.mysql.delete_by_chatid_ls(message.chat.id)
+                __send_message_cu(answer, message.chat.id)
             else:
                 onexbet_command(message)
                 return              
+
+        # Fix here
+        def __form_leagues_list(message) -> str:
+            list_leagues = self.mysql.get_rows_by_chatid_ls(message.chat.id)
+            return 'There is not data' if not list_leagues else '\n'.join(
+                # list_leagues - row from league_selection table
+                # [0] - first element of chat table
+                [str(league[0]) for league in list_leagues]
+            )
 
 
         def __close_menu(message) -> None:
@@ -194,15 +208,16 @@ class TelegramBot(threading.Thread):
             '''
             Remove club by name from club storage
             '''
-            answer = self.storage.delete_team(message.text)
-            self.send_message_cu(answer, message.chat.id)           
+            answer = self.mysql.delete_by_leaguename_chatid_ls(message.text,
+                                                               message.chat.id)
+            __send_message_cu(answer, message.chat.id)           
 
 
         def __add_club_to_club_storage(message) -> None:
             '''
             Add a new club to the club list
             '''
-            answer = self.storage.add_team(message.text)
+            answer = self.mysql.insert_to_ls(message.text, message.chat.id)
             __send_message_cu(answer, message.chat.id)
 
 
@@ -216,45 +231,10 @@ class TelegramBot(threading.Thread):
                             parse_mode='html')
 
 
-        def __form_str_from_top_leagues(events) -> str:
-            '''
-            Formint a string from top leagues in the database 
-            '''
-            events_str = str()
-            league_list = [club for club in self.config['TELEGRAM']['leagues'].split(',')]
-            for event in events:
-                if event[4] in league_list:
-                    events_str += __form_club_str(event)
-            return events_str if not events_str else 'There is not data'                                
-
-
-        def __form_str_from_all_leagues(events) -> str:
-            '''
-            Formint a string from all leagues in the database
-            '''
-            events_str = str()
-            for event in events:
-                events_str += __form_club_str(event)
-            return events_str if not events_str else 'There is not data'
-
-
-        def __form_club_str(event) -> str:
-            '''
-            Create a line for printing
-            '''
-            return ('<b>{title}</b> {t1} vs {t2} time <b>{time}</b>\n'
-                    .format(title=event[4],
-                            t1=event[1],
-                            t2=event[2],
-                            time=event[3][:10]))
-
-    
         def __send_message_cu(text, receiver_id) -> None:
             self.bot.send_message(receiver_id,
                                 text,
                                 parse_mode='html') 
 
 
-        self.bot.infinity_polling()                           
-
-    
+        self.bot.infinity_polling()

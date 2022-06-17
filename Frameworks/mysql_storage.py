@@ -3,9 +3,7 @@ import mysql.connector
 from mysql.connector import errorcode
 from datetime import datetime
 import logging
-import configparser as cp
 from Frameworks.onexbet import BettingApi
-
 
 
 class MySQLStorage():
@@ -29,7 +27,7 @@ class MySQLStorage():
                         port = self.config['MYSQL']['port'],
                         user = self.config['MYSQL']['user_name'],
                         password = self.config['MYSQL']['password'],
-                        database = self.config['MYSQL']['db_name']
+                        database = self.config['MYSQL']['db_name']          
                     )
         except mysql.connector.Error as err:
             if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
@@ -49,9 +47,11 @@ class MySQLStorage():
                (team1, team2, start_date, title) 
         '''
         data = self.fApi.get_club_events()
-        query = ("INSERT INTO onexdata "
-                "(team1, team2, start_date, title) "
-                "VALUES " + data)
+        query = '''
+                INSERT 
+                INTO onexdata (team1, team2, start_date, title)
+                VALUES 
+                ''' + data
         return self.__execute_query(query)
 
 
@@ -59,7 +59,7 @@ class MySQLStorage():
         '''
         Delete all rows from onexdata table
         '''
-        query = ("TRUNCATE TABLE onexdata")
+        query = '''TRUNCATE TABLE onexdata'''
         return self.__execute_query(query)
 
 
@@ -67,63 +67,42 @@ class MySQLStorage():
         '''
         Get rows where time is today from onexdata table
         '''
-        cur_time = self.get_today_str()
-        query = ("SELECT * FROM onexdata" 
-                "WHERE start_date LIKE '{d}%'"
-                .format(d=cur_time))
+        cur_time = self.__get_today_str()
+        query = '''
+                SELECT * 
+                FROM onexdata 
+                WHERE start_date LIKE '{d}%'       
+                '''.format(d=cur_time)
+
         result = self.__execute_select_query(query)         
         return self.__form_str_onexdate_table(result)
 
 
-    def get_rows_by_teams_name_onexdata(self, value : str) -> list:
+    def get_rows_by_teams_name_onexdata(self, value : str) -> str:
         '''
         Get rows in the select where team1 or team2 
         equals a needed team from onexdata table
         '''
-        query = ("SELECT * FROM onexdata WHERE " 
-                "lower(team1) = '{val}' or lower(team1) = '{val}'"
-                .format(val=value.lower()))        
+        query = '''
+                SELECT *
+                FROM onexdata
+                WHERE lower(team1) = '{val}' or lower(team1) = '{val}'                   
+                '''.format(val=value.lower())
         result = self.__execute_select_query(query)
         return self.__form_str_onexdate_table(result)     
 
 
-    def get_today_str(self) -> str:
-        '''
-        Get string of today in format yyyy-MM-dd
-        '''
-        now = datetime.now()
-        return now.strftime("%Y-%m-%d")
-
-
     # Methods for league table
-    def multi_insert_to_league(self) -> str:      
-        '''
-        Insetr some rows to mysql database league table in format:
-        data = (league1), (league2) 
-        '''
-        data = self.fApi.get_all_leagues()
-        query = ("INSERT INTO league "
-                "(league) "
-                "VALUES " + data)
-        return self.__execute_query(query)
-
-
-    def get_row_from_league(self, name : str) -> list:
-        '''
-        Get row from league table
-        '''
-        query = ("SELECT * FROM league WHERE " 
-                "league_name = '{val}'"
-                .format(val=name))
-        return self.__execute_select_query(query)
-
-
-    def get_allrows_from_league(self) -> list:
+    def get_allrows_from_league(self) -> str:
         '''
         Get all rows from league table
         '''
-        query = ("SELECT * FROM league")
-        return self.__execute_select_query(query)                
+        query = '''
+                SELECT * 
+                FROM league
+                '''
+        result = self.__execute_select_query(query)   
+        return self.__form_league_str(result)           
 
 
     # Methods for chat table
@@ -131,20 +110,24 @@ class MySQLStorage():
         '''
         Insetr row to mysql database chat table
         '''
-        query = ("INSERT INTO chat "
-                "(chat_id) "
-                "VALUES ({ci})"
-                .format(ci=data))
+
+        query = '''
+                INSERT
+                INTO chat (chat_id)    
+                VALUES ({ci})
+                '''.format(ci=data)
         return self.__execute_query(query)
 
 
-    def get_row_from_chat(self, data : str) -> list:
+    def get_row_from_chat(self, chatid : str) -> list:
         '''
         Get row from chat table
         '''
-        query = ("SELECT * FROM chat WHERE " 
-                "chat_id = {val}"
-                .format(val=data))
+        query = '''
+                SELECT * 
+                FROM chat 
+                WHERE chat_id = {val}                
+                '''.format(val=chatid)
         return self.__execute_select_query(query)   
 
 
@@ -154,26 +137,38 @@ class MySQLStorage():
         Insetr row to mysql database league_selection table in format:
         data = (chat_id, league_id)
         '''
-        league_id = self.get_row_from_league(league)
-        chat_id_field = self.get_row_from_chat(chat_id)
-        query = ("INSERT INTO league_selection "
-                "(chat_id, league_id) "
-                "VALUES ({ci}, {li})"
-                .format(ci=chat_id_field[0][0],
-                         li=league_id[0][0]))
+        # Get id value from league table(0 index - first element)
+        league_id = self.get_row_from_league(league)[0][0]
+        # Get chat_id value from chat table(0 index - first element)
+        chat_id_field = self.get_row_from_chat(chat_id)[0][0]
+        # Check whether there is a league in the league table or not
+        if not league_id:
+            return 'League is not correct. Try selecting from a list of leagues' 
+
+        query = '''
+                INSERT
+                INTO league_selection (chat_id, league_id)
+                VALUES ({ci}, {li}) 
+                '''.format(ci=chat_id_field,
+                           li=league_id)
         return self.__execute_query(query)
 
 
-    def get_rows_by_chatid_ls(self, chatid : str) -> str:
+    def get_rows_by_chatid_ls(self, chatid : str) -> list:
         '''
         Get rows from league_selection table 
         by id field from chat table
         '''
-        chatid_field = self.get_row_from_chat(chatid)
-        query = ("SELECT * FROM league_selection WHERE "
-                 "chat_id = {ci}"
-                 .format(ci=chatid_field[0]) )
-        return self.__execute_query(query)
+        query = '''
+                SELECT league.league_name
+                FROM league_selection 
+                INNER JOIN chat 
+                ON league_selection.chat_id = chat.id
+                INNER JOIN league 
+                ON league_selection.league_id = league.id
+                WHERE chat.chat_id = {ci}
+                '''.format(ci=chatid)             
+        return self.__execute_select_query(query)
 
 
     def delete_by_chatid_ls(self, chatid : str) -> str:
@@ -181,22 +176,31 @@ class MySQLStorage():
         Delete data from league_selection table 
         by id field from chat table
         '''
-        chat_id_field = self.get_row_from_chat(chatid)
-        query = ("DELETE FROM league_selection "
-                "WHERE chat_id = {ci}"
-                .format(ci=chat_id_field[0][0]))
+        # Get chat_id value from chat table(0 index - first element)
+        chat_id_field = self.get_row_from_chat(chatid)[0][0]
+        query = '''
+                DELETE 
+                FROM league_selection
+                WHERE chat_id = {ci}
+                '''.format(ci=chat_id_field)
         return self.__execute_query(query)
 
 
-    def delete_by_leaguename_ls(self, name : str):
+    def delete_by_leaguename_chatid_ls(self, league : str, chatid : str) -> str:
         '''
         Delete data from league_selection table 
-        by id field from league table
+        by id field and chatid one from league table
         '''
-        league_id = self.get_row_from_league(name)
-        query = ("DELETE FROM league_selection "
-                "WHERE league_id = {li}"
-                .format(li=league_id[0][0]))
+        # Get id value from league table(0 index - first element)
+        league_id = self.get_row_from_league(league)[0][0]
+        # Get chat_id value from chat table(0 index - first element)
+        chat_id_field = self.get_row_from_chat(chatid)[0][0]
+        query = '''
+                DELETE 
+                FROM league_selection 
+                WHERE league_id = {li} and chat_id = {ci}
+                '''.format(li=league_id,
+                           ci=chat_id_field)
         return self.__execute_query(query)     
 
 
@@ -204,13 +208,38 @@ class MySQLStorage():
         '''
         Get all rows from league_selection table
         '''
-        query = ("SELECT * FROM league_selection")
+        query = '''
+                SELECT * 
+                FROM league_selection
+                '''
         return self.__execute_select_query(query)
+
+
+    def __get_today_str(self) -> str:
+        '''
+        Get string of today in format yyyy-MM-dd
+        '''
+        now = datetime.now()
+        return now.strftime("%Y-%m-%d")
+
+
+    def __form_league_str(self, leagues : list) -> str:
+        '''
+        Formint a readable string all leagues
+        '''
+        if not leagues:
+            return 'The leagues table is empty'
+        else:
+            # 1 - is second element in the leagues table
+            result = '\n'.join(
+                [league_name[1] for league_name in leagues]
+                )
+            return result
 
 
     def __form_str_onexdate_table(self, events : list) -> str:
         '''
-        Formint a readable string all leagues
+        Formint a readable string all events
         '''
         if not events:
             return 'There are not events today'    
@@ -231,7 +260,7 @@ class MySQLStorage():
                                     time=event[3][:10]))    
 
 
-    def __execute_select_query(self, query : str) -> list: 
+    def __execute_select_query(self, query : str) -> str: 
         try:
             con = self.create_connection()
             cursor = con.cursor()
@@ -254,19 +283,4 @@ class MySQLStorage():
         except:
             return 'unseccsessfully'    
         finally:
-            con.close()  
-
-
-#     def read_config(self) -> cp.ConfigParser:
-#         '''
-#         Read config.ini file
-#         '''
-#         config = cp.ConfigParser()
-#         config.read('config.ini')
-#         return config                           
-
-# t = MySQLStorage()
-
-# print(t.get_allrows_from_league())
-
-
+            con.close()
