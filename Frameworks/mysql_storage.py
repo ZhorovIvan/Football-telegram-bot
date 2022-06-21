@@ -15,6 +15,7 @@ class MySQLStorage():
     def __init__(self, config) -> None:
         self.config = config
         self.fApi = BettingApi(self.config)
+        self.connection = self.create_connection()
 
 
     def create_connection(self) -> mysql.connector:
@@ -93,6 +94,18 @@ class MySQLStorage():
 
 
     # Methods for league table
+    def multi_insert_to_league(self) -> str:      
+        '''
+        Insetr some rows to mysql database league table in format:
+        data = (league1), (league2) 
+        '''
+        data = self.fApi.get_all_leagues()
+        query = ("INSERT INTO league "
+                "(league) "
+                "VALUES " + data)
+        return self.__execute_query(query)
+
+
     def get_allrows_from_league(self) -> str:
         '''
         Get all rows from league table
@@ -101,8 +114,18 @@ class MySQLStorage():
                 SELECT * 
                 FROM league
                 '''
-        result = self.__execute_select_query(query)   
-        return self.__form_league_str(result)           
+        result = self.__execute_select_query(query)
+        return self.__form_league_str(result)
+
+
+    def get_row_from_league(self, name : str) -> list:
+        '''
+        Get row from league table
+        '''
+        query = ("SELECT * FROM league WHERE " 
+                "league_name = '{val}'"
+                .format(val=name))
+        return self.__execute_select_query(query)          
 
 
     # Methods for chat table
@@ -137,14 +160,13 @@ class MySQLStorage():
         Insetr row to mysql database league_selection table in format:
         data = (chat_id, league_id)
         '''
-        # Get id value from league table(0 index - first element)
-        league_id = self.get_row_from_league(league)[0][0]
-        # Get chat_id value from chat table(0 index - first element)
+        try:
+            # Get id value from league table(0 index - first element)
+            league_id = self.get_row_from_league(league)[0][0]
+        except:
+            return 'League is not correct. Try selecting from a list of leagues' 
         chat_id_field = self.get_row_from_chat(chat_id)[0][0]
         # Check whether there is a league in the league table or not
-        if not league_id:
-            return 'League is not correct. Try selecting from a list of leagues' 
-
         query = '''
                 INSERT
                 INTO league_selection (chat_id, league_id)
@@ -154,7 +176,7 @@ class MySQLStorage():
         return self.__execute_query(query)
 
 
-    def get_rows_by_chatid_ls(self, chatid : str) -> list:
+    def get_rows_by_chatid_ls(self, chatid : str) -> str:
         '''
         Get rows from league_selection table 
         by id field from chat table
@@ -167,8 +189,9 @@ class MySQLStorage():
                 INNER JOIN league 
                 ON league_selection.league_id = league.id
                 WHERE chat.chat_id = {ci}
-                '''.format(ci=chatid)             
-        return self.__execute_select_query(query)
+                '''.format(ci=chatid)
+        result = self.__execute_select_query(query)
+        return self.__form_str_leagues_list(result)
 
 
     def delete_by_chatid_ls(self, chatid : str) -> str:
@@ -235,6 +258,14 @@ class MySQLStorage():
                 [league_name[1] for league_name in leagues]
                 )
             return result
+
+
+    def __form_str_leagues_list(self, list_leagues : list) -> str:
+        return 'There is not data' if not list_leagues else '\n'.join(
+            # list_leagues - row from league_selection table
+            # [0] - first element of chat table
+            [str(league[0]) for league in list_leagues]
+        )
 
 
     def __form_str_onexdate_table(self, events : list) -> str:

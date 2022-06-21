@@ -162,8 +162,8 @@ class TelegramBot(threading.Thread):
             '''
             Action for working with club_storage
             '''
-            if message.text == self.get_list_button:
-                answer = __form_leagues_list(message)
+            if message.text == self.get_list_button:               
+                answer = self.mysql.get_rows_by_chatid_ls(message.chat.id)
                 __send_message_cu(answer, message.chat.id)
 
             elif message.text == self.add_league_button:
@@ -181,16 +181,7 @@ class TelegramBot(threading.Thread):
                 __send_message_cu(answer, message.chat.id)
             else:
                 onexbet_command(message)
-                return              
-
-        # Fix here
-        def __form_leagues_list(message) -> str:
-            list_leagues = self.mysql.get_rows_by_chatid_ls(message.chat.id)
-            return 'There is not data' if not list_leagues else '\n'.join(
-                # list_leagues - row from league_selection table
-                # [0] - first element of chat table
-                [str(league[0]) for league in list_leagues]
-            )
+                return
 
 
         def __close_menu(message) -> None:

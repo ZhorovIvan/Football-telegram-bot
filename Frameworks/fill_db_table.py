@@ -25,6 +25,7 @@ class Timer(threading.Thread):
 
 
     def fill_database(self) -> None:
+        leagues = 
         pass
 
 

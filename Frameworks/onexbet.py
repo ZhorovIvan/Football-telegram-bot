@@ -14,6 +14,11 @@ class BettingApi():
         self.config = config
 
 
+    def get_leagues(self) -> list:
+        response = self.__get_response(self.config["FOOTBALL"]["leagues_url"])
+        return ""
+
+
     def get_club_events(self) -> str:
         '''
         Get all the information on the clubs performance over the three matches ahead
