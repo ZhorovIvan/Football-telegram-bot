@@ -27,11 +27,11 @@ class TelegramBot(threading.Thread):
     return_back_button = '🔙return back'
 
 
-    def __init__(self, config) -> None:
+    def __init__(self, config, mysql) -> None:
         threading.Thread.__init__(self)
         self.config = config
         self.bot = telebot.TeleBot(self.config['TELEGRAM']['token'])
-        self.mysql = MySQLStorage(self.config)
+        self.mysql = mysql
 
 
     def run(self) -> None:
@@ -146,7 +146,7 @@ class TelegramBot(threading.Thread):
 
 
         def __print_all_leagues(message):
-            leagues = self.mysql.get_allrows_from_league()
+            leagues = self.mysql.get_allrows_from_league(is_string_type=True)
             __send_message_cu(leagues, message.chat.id)
 
 

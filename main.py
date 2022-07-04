@@ -1,21 +1,26 @@
-from Frameworks.football_telebot import TelegramBot
-from Frameworks.fill_db_table import Timer
-from Frameworks.settings import read_config, init_logger
-
+from Frameworks import settings, fill_db_table, football_telebot, mysql_storage, onexbet
 
 def main() -> None:
-    init_logger()
-    config = read_config()
+    global logger
+    settings.init_logger
 
-    #process1 = Timer(config)
-    process2 = TelegramBot(config)
+    logger = settings.init_logger()
 
-    #process1.start()
+    settings.preparation()
+
+    config = settings.read_config()
+    mysql = mysql_storage.MySQLStorage(config)
+    bet_api = onexbet.BettingApi(config)
+    
+    process1 = fill_db_table.Timer(config, mysql, bet_api, logger)
+    process2 = football_telebot.TelegramBot(config, mysql)
+
+    process1.start()
     process2.start()
  
 
 if __name__ == "__main__":
-    # try:
+    try:
         main()
-    # except Exception as e:
-    #     logging.fatal(e)
+    except Exception as e:
+        logger.fatal(e)

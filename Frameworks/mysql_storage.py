@@ -8,13 +8,12 @@ from Frameworks.onexbet import BettingApi
 
 class MySQLStorage():
     '''
-    Table schema 
-    | id | team1 | team2 | start_date | title |
-    '''     
+    Work with all tables
+    '''
 
     def __init__(self, config) -> None:
         self.config = config
-        self.fApi = BettingApi(self.config)
+        self.bet_api = BettingApi(self.config)
         self.connection = self.create_connection()
 
 
@@ -47,7 +46,7 @@ class MySQLStorage():
         data = (team1, team2, start_date, title), 
                (team1, team2, start_date, title) 
         '''
-        data = self.fApi.get_club_events()
+        data = self.bet_api.get_club_events()
         query = '''
                 INSERT 
                 INTO onexdata (team1, team2, start_date, title)
@@ -94,19 +93,19 @@ class MySQLStorage():
 
 
     # Methods for league table
-    def multi_insert_to_league(self) -> str:      
+    def multi_insert_to_league(self, data : str) -> str:      
         '''
         Insetr some rows to mysql database league table in format:
         data = (league1), (league2) 
         '''
-        data = self.fApi.get_all_leagues()
+        
         query = ("INSERT INTO league "
                 "(league) "
                 "VALUES " + data)
         return self.__execute_query(query)
 
 
-    def get_allrows_from_league(self) -> str:
+    def get_allrows_from_league(self, is_string_type : bool) -> str:
         '''
         Get all rows from league table
         '''
@@ -115,12 +114,14 @@ class MySQLStorage():
                 FROM league
                 '''
         result = self.__execute_select_query(query)
-        return self.__form_league_str(result)
+        if is_string_type:
+            return self.__form_league_str(result)
+        return result
 
 
     def get_row_from_league(self, name : str) -> list:
         '''
-        Get row from league table
+        Get row from league table by league name
         '''
         query = ("SELECT * FROM league WHERE " 
                 "league_name = '{val}'"
@@ -293,25 +294,20 @@ class MySQLStorage():
 
     def __execute_select_query(self, query : str) -> str: 
         try:
-            con = self.create_connection()
-            cursor = con.cursor()
+            cursor = self.connection.cursor()
             cursor.execute(query)
             result = cursor.fetchall()
             return result
         except:
             return list()
-        finally:
-            con.close()             
+            
 
 
     def __execute_query(self, query : str) -> str:
         try:
-            con = self.create_connection()
-            cursor = con.cursor(buffered=True)
+            cursor = self.connection.cursor(buffered=True)
             cursor.execute(query)
-            con.commit()
+            self.connection.commit()
             return 'seccsessfully'
         except:
             return 'unseccsessfully'    
-        finally:
-            con.close()

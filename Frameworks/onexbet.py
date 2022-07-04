@@ -1,6 +1,5 @@
 import json
 import requests
-import configparser as cp
 import logging
 
 
@@ -15,8 +14,14 @@ class BettingApi():
 
 
     def get_leagues(self) -> list:
+        '''
+        Get list that containts new leagues
+        '''
         response = self.__get_response(self.config["FOOTBALL"]["leagues_url"])
-        return ""
+        data_for_insert = list()
+        for frame in response:
+            data_for_insert += self.__get_info_for_league(frame)
+        return data_for_insert
 
 
     def get_club_events(self) -> str:
@@ -28,6 +33,16 @@ class BettingApi():
         for frame in response:
             data_for_insert_to_onexdata += self.__get_info_for_onexdata(frame)
         return data_for_insert_to_onexdata[:-1]
+
+
+    def __get_info_for_league(self, frame):
+            try:
+                return frame['title']
+            except KeyError as e:
+                logging.warning('get_leagues: not found element {}'.format(str(e)))
+            except Exception as e:
+                logging.error(str(e))        
+            return []
 
 
     def __get_info_for_onexdata(self, frame) -> str:
