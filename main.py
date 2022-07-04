@@ -1,11 +1,3 @@
-<<<<<<< HEAD
-import configparser as cp
-
-config = cp.ConfigParser()
-config.read('config.ini')
-
-print(config['TELEGRAM']['token'] == '1918073988:AAHaAem6Y4U_bko3SESMTxa8wvgjy51X2r4')
-=======
 from Frameworks import settings, fill_db_table, football_telebot, mysql_storage, onexbet
 
 def main() -> None:
@@ -32,4 +24,3 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         logger.fatal(e)
->>>>>>> 048dda2 (test version)
